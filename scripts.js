@@ -1,5 +1,5 @@
 function imageUrlConstructor(baseUrl, imageId, imageSize) {
-    
+
 }
 
 function imageUrlConstructor2(baseUrl, imageId) {
@@ -100,10 +100,26 @@ function Exhibitions(id, title, short_description, image_url
     this.image_id = image_id;
 }
 
-function dateTest() {
+async function dateTest() {
     var newDate = new Date();
-    document.getElementById("date1").innerHTML = newDate.toString();
+    document.getElementById('date').innerHTML = newDate.toString();
     console.log(newDate);
 }
 
 dateTest();
+
+async function fetchData(url) {
+    const response = await fetch(url);
+    const data = await response.json();
+    return data;
+}
+
+(async () => {
+    try {
+        var url = 'https://api.artic.edu/api/v1/artworks/129884';
+        const fetchedData = await fetchData(url);
+        console.log(fetchedData);
+    } catch (err) {
+        console.log(err);
+    } 
+})();
