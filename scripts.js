@@ -1,12 +1,19 @@
 /**
- * An object which will help with dictating acceptable URL types
- * which will be used by the url
+ * A constant which will help with determining which endpoint will be accessed
+ * based on objects which are being created. Special terms will be created
+ * when specific search queries will need to be built. Used in the fetchUrlConstructor
+ * method
  */
 const UrlTypes = {
+    /**Used to denote that the exhibitions endpoint will be used */
     EXHIBIT: 'exhibit',
+    /**Used to denote that the images endpoint will be used */
     IMAGE: 'image',
+    /**Used to denote that the agents endpoint will be used to retrieve artists */
     ARTIST: 'artist',
+    /**Used to denote that the artworks endpoint will be used */
     ARTWORK: 'artwork',
+    /**Used to denote that the search endpoint will be used to retrieve featured exhibits */
     FEATURED_EXHIBITS: 'featured_exhibits'
 }
 
@@ -149,7 +156,7 @@ async function createExhibition(fetchedDataData) {
     const exhibit = new Exhibition( fetchedDataData.api_link
                                     , fetchedDataData.id
                                     , fetchedDataData.title
-                                    , fetchedDataData.short_description
+                                    , fetchedDataData.short_description.replace(/<\/?[^>]+(>|$)/g, '')
                                     , fetchedDataData.image_url
                                     , fetchedDataData.gallery_title
                                     , fetchedDataData.artist_ids
@@ -343,20 +350,14 @@ function fetchUrlConstructor(type, characteristic, requiredOnly = true) {
  * A function which will help create several Exhibition objects after calling the
  * fetch functions
  * 
+ * @param {*} exhibitIds the array of ids associated with one or more exhibits
  * @returns an array of exhibition objects
  */
-async function createExhibitionList() {
-    //retrieve a list of 5 featured exhibits using fetch function
-    const featuredExhibitsUrl = fetchUrlConstructor(UrlTypes.FEATURED_EXHIBITS, [5]);
-    const fetchedData = await fetchData(featuredExhibitsUrl);
-    
-    //the id of the exhibits will be added to an array and each will be fetched
-    const idArray = fetchedData.data.map(element => element.id);
-    const exhibitResourcesUrl = fetchUrlConstructor(UrlTypes.EXHIBIT, idArray);
+async function createExhibitionListFromIds(exhibitIds) {
+    //take array of objects and construct a new fetch url to get specific data
+    //on each exhibition based on their id
+    const exhibitResourcesUrl = fetchUrlConstructor(UrlTypes.EXHIBIT, exhibitIds);
     const fetchedExhibitData = await fetchData(exhibitResourcesUrl);
-
-    //var fetchedExhibitDataArray = fetchedExhibitData.map(element => element.data);
-    //console.log("one " + fetchedExhibitDataArray[0].id);
     
     //traverse through JSON object to create the exhibition object
     var exhibits = [];
@@ -364,13 +365,52 @@ async function createExhibitionList() {
         const newExhibit = await createExhibition(element);
         exhibits.push(newExhibit);
     }
-    console.log(exhibits.length);
-
     return exhibits;
 }
 
-createExhibitionList();
+async function displayFeaturedExhibitions() {
+    //retrieve a list of 5 featured exhibits using fetch function
+    const featuredExhibitsUrl = fetchUrlConstructor(UrlTypes.FEATURED_EXHIBITS, [5]);
+    const fetchedData = await fetchData(featuredExhibitsUrl);
+    
+    //the id of the exhibits will be added to an array and each will be fetched
+    const exhibitIds = fetchedData.data.map(element => element.id);
+    var featuredExhibitions = await createExhibitionListFromIds(exhibitIds);
+    const container = document.getElementById('card-container');
 
+    //card container will hold all images, thus a new card must be created for each exhibit
+    for(const element of featuredExhibitions) {
+        //create card which will contain image & description
+        const card = document.createElement('ul');
+        card.className = 'card';
+        container.appendChild(card);
+
+        //create image which will be added inside of card
+        const cardImage = document.createElement('img');
+        card.className = 'card-image';
+        if(element.imageUrl !== undefined) {
+            cardImage.src = element.imageUrl; 
+        }
+        else if(element.heroImageUrl !== undefined) {
+            cardImage.src = element.heroImageUrl;
+        }
+        card.appendChild(cardImage);
+
+        //create card title
+        const cardTitle = document.createElement('h3');
+        cardTitle.className = 'card-title';
+        cardTitle.textContent = element.title;
+        card.appendChild(cardTitle);
+
+        //create card description
+        const cardDescription = document.createElement('p');
+        cardDescription.className = 'card-description';
+        cardDescription.textContent = element.shortDescription;
+        card.appendChild(cardDescription);
+    }
+}
+
+displayFeaturedExhibitions();
 
 /*
 1. retrieve a list of 5-10 featured exhibits using fetch function
@@ -382,7 +422,7 @@ createExhibitionList();
 3. use display function to display images
 */
 
-
+/*
 async function dateTest() {
     var newDate = new Date();
     document.getElementById('date').innerHTML = newDate.toString();
@@ -400,3 +440,4 @@ dateTest();
         console.log(err);
     } 
 })();
+*/
