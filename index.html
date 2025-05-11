@@ -4,29 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="styles.css">
-    <title>Exploring Art</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@300..700&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap" rel="stylesheet"><title>Exploring Art</title>
+    <title>Document</title>
 </head>
-<body>
-    <header>
-        <nav>
-            <h1>Exploring Art</h1>
-            <ul>
-                <a href="">Exhibititions</a>
-                <a href="">Artists</a>
-                <a href="">About</a>
-            </ul>
-        </nav>
-    </header>
 
-    <a>
-        <!--This is where the sliding images will be generated and stored from the javascript -->
-        <section id = "card-container">
-            <button>Previous</button>
-            <button>Next</button>
-        </section>
-    </a>
-    
-    
+<body>
+    <nav>
+        <h1>EXPLORING ART</h1>
+        <span>
+            <button class="active-button">EXHIBITION</button>
+            <button>ARTIST</button>
+            <button>ABOUT</button>
+        </span>
+    </nav>
+
+    <!--This is where the images will be generated and stored from the javascript 
+     <button class = "previous">[</button>
+            <button class = "next">]</button>
+            -->
+        <div id = "card-container"></div>
+
     <script type="text/javascript" src="scripts.js"></script>
 </body>
 </html>

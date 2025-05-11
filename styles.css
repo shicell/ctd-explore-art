@@ -1,4 +1,97 @@
+.orange--teal-1-rgba { color: rgba(2, 82, 89, 1); }
+.orange--teal-2-rgba { color: rgba(0, 112, 114, 1); }
+.orange--teal-3-rgba { color: rgba(242, 147, 36, 1); }
+.orange--teal-4-rgba { color: rgba(216, 79, 4, 1); }
+.orange--teal-5-rgba { color: rgba(244, 226, 221, 1); }
+
+
+nav {
+    padding: 0rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: rgb(62, 54, 46);
+}
+
 body {
-    background-color: beige;
+    font-family: Nunito;
+    color:rgb(10, 13, 17);
+}
+
+h1 {
+    font-weight: 700;
+    font-family: Lato;
+    color:rgb(10, 13, 17);
+}
+
+ul {
+    font-weight: 650;
+    font-size: smaller;
+}
+
+#card-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: hsla(10, 50, 91, 1);
+    padding-bottom: 0.5rem;
+    box-shadow: 1px 2px 2px rgb(170, 158, 146), 1px 5px 5px rgb(222, 205, 189);
+    border-radius: 10px;
+}
+
+.card-image {
+    width: 100%;
+    height: 100%;
+    border-radius: 10px 10px 0px 0px;
+}
+
+p {
+    padding-inline: 0.5rem;
+    color: rgb(10, 13, 17);
+    padding: 0px 30px 10px 30px;
+}
+
+h3 {
+    color: rgba(0, 112, 114, 1);
+    padding: 10px 30px 0px 30px;
+
+}
+
+.card-text {
     
+}
+
+.card-button {
+    font-family: Lato;
+    font-weight: 400;
+    background-color: rgba(0, 112, 114, 1);
+    border: none;
+    padding: 10px 30px;
+    margin-bottom: 20px;
+    color: honeydew;
+    border-radius: 5px;
+}
+
+nav button {
+    font-family: Lato;
+    font-weight: 550;
+    background-color: white;
+    border-color: rgb(207, 190, 181);
+    
+    padding: 8px 10px;
+    color:  rgba(0, 112, 114, 1);
+}
+
+.active-button {    
+    background-color: rgba(0, 112, 114, 1);
+    color: honeydew;
+    border: none;
+    padding: 10px 10px;
 }

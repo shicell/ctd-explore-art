@@ -361,33 +361,42 @@ async function createExhibitionListFromIds(exhibitIds) {
     
     //traverse through JSON object to create the exhibition object
     var exhibits = [];
-    for (const element of fetchedExhibitData.data) {
-        const newExhibit = await createExhibition(element);
+    if(fetchedExhibitData.data.length > 1){
+        for (const element of fetchedExhibitData.data) {
+            const newExhibit = await createExhibition(element);
+            exhibits.push(newExhibit);
+        }  
+    }
+    else {
+        const newExhibit = await createExhibition(fetchedExhibitData.data);
         exhibits.push(newExhibit);
     }
     return exhibits;
 }
 
+/**
+ * A function which is meant to help load the initia page for exhibitions
+ */
 async function displayFeaturedExhibitions() {
     //retrieve a list of 5 featured exhibits using fetch function
     const featuredExhibitsUrl = fetchUrlConstructor(UrlTypes.FEATURED_EXHIBITS, [5]);
     const fetchedData = await fetchData(featuredExhibitsUrl);
     
     //the id of the exhibits will be added to an array and each will be fetched
-    const exhibitIds = fetchedData.data.map(element => element.id);
+    const exhibitIds = fetchedData.data.map(element => element.id); 
     var featuredExhibitions = await createExhibitionListFromIds(exhibitIds);
     const container = document.getElementById('card-container');
-
+    
     //card container will hold all images, thus a new card must be created for each exhibit
     for(const element of featuredExhibitions) {
         //create card which will contain image & description
-        const card = document.createElement('ul');
+        const card = document.createElement('div');
         card.className = 'card';
         container.appendChild(card);
 
         //create image which will be added inside of card
         const cardImage = document.createElement('img');
-        card.className = 'card-image';
+        cardImage.className = 'card-image';
         if(element.imageUrl !== undefined) {
             cardImage.src = element.imageUrl; 
         }
@@ -407,20 +416,17 @@ async function displayFeaturedExhibitions() {
         cardDescription.className = 'card-description';
         cardDescription.textContent = element.shortDescription;
         card.appendChild(cardDescription);
+
+        //create a button to read more about this specific object
+        const cardButton = document.createElement('button');
+        cardButton.className = 'card-button';
+        cardButton.textContent = 'View Artworks';
+        card.appendChild(cardButton);
     }
 }
 
 displayFeaturedExhibitions();
 
-/*
-1. retrieve a list of 5-10 featured exhibits using fetch function
-2. load each as a exhibits object, storing data 
-    a. retrieve most data from json
-    b. for prefered image, will need to create image url
-        i. retrieve image using fetch
-       ii. use image url constructor to create full url image
-3. use display function to display images
-*/
 
 /*
 async function dateTest() {
