@@ -494,7 +494,6 @@ async function createResourcesListFromIds(resourceTypes, resourceIds) {
         }
         resources.push(newResource);
     } 
-    console.log(resourceTypes + "jkjlkjlk");
     return resources;
 }
 
@@ -581,8 +580,6 @@ function generateCardGenerationArray(resourceType, resourceToPresent) {
             else {
                 selectedURL = DEFAULT_IMAGE_URL; 
             }
-            
-            console.log(selectedURL);
             cardsArray.push([selectedURL, element.title, element.description, element.knownWorks]);
         }
     }
@@ -619,12 +616,11 @@ async function displayRandomArtist() {
     
     var randomArtists = await createResourcesListFromIds(UrlTypes.ARTIST, artistsIds);
     const cardArray = generateCardGenerationArray(UrlTypes.ARTIST, randomArtists);
-    displayCardsOnActivePage(cardArray);
+    displayCardsOnActivePage(cardArray, true);
 }
 
 async function displayArtworks(artworkIds) {    
     var artworks = await createResourcesListFromIds(UrlTypes.ARTWORK, artworkIds);
-    console.log(artworks);
     const cardArray = generateCardGenerationArray(UrlTypes.ARTWORK, artworks);
     displayCardsOnActivePage(cardArray, true);
 }
