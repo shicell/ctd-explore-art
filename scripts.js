@@ -501,7 +501,7 @@ async function createResourcesListFromIds(resourceTypes, resourceIds) {
 /**
  * A function which is meant to help load the 
  */
-async function displayCardsOnActivePage(cardItemArray) {
+async function displayCardsOnActivePage(cardItemArray, isArt = false) {
     const container = document.getElementById('card-container');
 
     //card container will hold all images, thus a new card must be created for each exhibit
@@ -529,11 +529,15 @@ async function displayCardsOnActivePage(cardItemArray) {
         cardDescription.textContent = element[2];
         card.appendChild(cardDescription);
 
-        //create a button to read more about this specific object
-        const cardButton = document.createElement('button');
-        cardButton.className = 'card-button';
-        cardButton.textContent = 'View Artworks';
-        card.appendChild(cardButton);
+        if(!isArt && element[3].length !== 0){
+            //create a button to read more about this specific object
+            const cardButton = document.createElement('button');
+            cardButton.className = 'card-button';
+            cardButton.textContent = 'View Artworks';
+            cardButton.onclick = function(){displayArtworks(element[3])};
+            card.appendChild(cardButton);
+        }
+        
     }
 }
 
@@ -562,7 +566,7 @@ function generateCardGenerationArray(resourceType, resourceToPresent) {
             else{
                 selectedURL = DEFAULT_IMAGE_URL;
             }
-            cardsArray.push([selectedURL, element.title, element.shortDescription]);
+            cardsArray.push([selectedURL, element.title, element.shortDescription, element.artworkIds]);
         }
     } 
     //see if the resources are artists
@@ -579,14 +583,13 @@ function generateCardGenerationArray(resourceType, resourceToPresent) {
             }
             
             console.log(selectedURL);
-            cardsArray.push([selectedURL, element.title, element.description]);
+            cardsArray.push([selectedURL, element.title, element.description, element.knownWorks]);
         }
     }
     //see if the resources to view are artworks
     else if (resourceType === UrlTypes.ARTWORK) {
-        var selectedURL;
         for(const element of resourceToPresent) {
-            cardsArray.push(imageUrl, title, shortDescription);
+            cardsArray.push([element.imageUrl, element.title, element.shortDescription]);
         }
     } else {
         throw new TypeError("Provided data needs to be of type artwork, artist or exihibition.");
@@ -614,30 +617,14 @@ async function displayRandomArtist() {
     //the id of the exhibits will be added to an array and each will be fetched
     const artistsIds = fetchedData.data.map(element => element.id);
     
-    var randomArtists = await createResourcesListFromIds(UrlTypes.ARTIST, artistsIds);  console.log("artistsIds");
+    var randomArtists = await createResourcesListFromIds(UrlTypes.ARTIST, artistsIds);
     const cardArray = generateCardGenerationArray(UrlTypes.ARTIST, randomArtists);
     displayCardsOnActivePage(cardArray);
 }
-// displayRandomArtist();
-//displayFeaturedExhibitions(); 
 
-
-/*
-async function dateTest() {
-    var newDate = new Date();
-    document.getElementById('date').innerHTML = newDate.toString();
-    //console.log(newDate);
+async function displayArtworks(artworkIds) {    
+    var artworks = await createResourcesListFromIds(UrlTypes.ARTWORK, artworkIds);
+    console.log(artworks);
+    const cardArray = generateCardGenerationArray(UrlTypes.ARTWORK, artworks);
+    displayCardsOnActivePage(cardArray, true);
 }
-
-dateTest();
-
-(async () => {
-    try {
-        var url = 'https://api.artic.edu/api/v1/artworks/129884';
-        const fetchedData = await fetchData(url);
-        //console.log(fetchedData);
-    } catch (err) {
-        console.log(err);
-    } 
-})();
-*/
