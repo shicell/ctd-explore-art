@@ -14,8 +14,15 @@ const UrlTypes = {
     /**Used to denote that the artworks endpoint will be used */
     ARTWORK: 'artwork',
     /**Used to denote that the search endpoint will be used to retrieve featured exhibits */
-    FEATURED_EXHIBITS: 'featured_exhibits'
+    FEATURED_EXHIBITS: 'featured_exhibits', 
+    /**Used to denote that the search endpoint will be used to retrieve artworks created by artist */
+    ARTWORK_BY_ARTIST: 'artwork_by_artist',
+    /**Used to denote that the search endpoint will be used to retrieve random artworks */
+    RANDOM_ARTIST: 'random_artist'
 }
+
+const DEFAULT_IMAGE_URL = 'https://www.artic.edu/iiif/2/82a87cf0-6082-a7f7-c2cf-0fc9283ed966/full/843,/0/default.jpg';
+    
 
 /**
  * The artwork object and all of its details related to image, artist, and creation 
@@ -24,7 +31,6 @@ const UrlTypes = {
  * @param {*} id Unique identifier of this artwork. Taken from the source system.
  * @param {*} title The name of this artwork
  * @param {*} imageId Unique identifier of the preferred image to use to represent this artwork
- * @param {*} iiifUrl IIIF URL of the image of this artwork
  * @param {*} imageUrl The complete url used to retieve the image used to represent this artwork
  * @param {*} artistId Unique identifier of the preferred artist/culture associated with this artwork
  * @param {*} artistDisplay Readable description of the creator of this artwork. Includes artist names, nationality and lifespan dates
@@ -41,7 +47,7 @@ const UrlTypes = {
  * @param {*} styleTitle The name of the preferred style term for this artwork
  * @param {*} classificationTitle The name of the preferred classification term for this artwork
  */
-function Artwork(api_link, id, title, imageId, iiifUrl, imageUrl
+function Artwork(api_link, id, title, imageId, imageUrl
                 , artistId , artistDisplay, dateDisplay
                 , shortDescription, altTitles, dateStart
                 , dateEnd, placeOrigin, description
@@ -52,7 +58,6 @@ function Artwork(api_link, id, title, imageId, iiifUrl, imageUrl
     this.id = id;
     this.title = title;
     this.imageId = imageId;
-    this.iiifUrl = iiifUrl;
     this.imageUrl = imageUrl;
     this.artistId = artistId;
     this.artistDisplay = artistDisplay;
@@ -80,14 +85,16 @@ function Artwork(api_link, id, title, imageId, iiifUrl, imageUrl
  * @param {*} birth_date The year this artist was born
  * @param {*} death_date The year this artist died
  * @param {*} description A biographical description of the artist
+ * @param {*} knownWorks a list of some of the artwork this artist is known for
  */
-function Artist(api_link, id, title, birthDate, deathDate, description) {
+function Artist(api_link, id, title, birthDate, deathDate, description, knownWorks) {
     this.api_link = api_link;
     this.id = id;
     this.title = title;
     this.birthDate = birthDate;
     this.deathDate = deathDate;
     this.description = description;
+    this.knownWorks = knownWorks;
     //would need to collect a collection of their work
     //could also get links to all exhibitions their artwork is involved in
 }
@@ -156,7 +163,7 @@ async function createExhibition(fetchedDataData) {
     const exhibit = new Exhibition( fetchedDataData.api_link
                                     , fetchedDataData.id
                                     , fetchedDataData.title
-                                    , fetchedDataData.short_description.replace(/<\/?[^>]+(>|$)/g, '')
+                                    , fetchedDataData.short_description
                                     , fetchedDataData.image_url
                                     , fetchedDataData.gallery_title
                                     , fetchedDataData.artist_ids
@@ -165,6 +172,88 @@ async function createExhibition(fetchedDataData) {
     );
 
     return exhibit;
+}
+
+/**
+ * This method will create and return an Artist object from the 
+ * provided fetched Data 
+ * 
+ * @param {*} fetchedDataData data, in the form of JSON, retrieved from the API call 
+ * from within the data section
+ * @returns the resulting Artist object
+ * @throws TypeError if found in the api model type that provided data does not
+ * belong to an Artist, stored as 'agents' in data.api_model
+ */
+async function createArtist(fetchedDataData) {
+    if(fetchedDataData.api_model !== 'agents') {
+        throw new TypeError('Provided data must belong to an agents resource.');
+    }
+    
+    //need to determine at least one work of art from artist 
+    const artistKnownArtworkUrl = fetchUrlConstructor(UrlTypes.ARTWORK_BY_ARTIST, [fetchedDataData.id]); 
+    
+    const fetchedData = await fetchData(artistKnownArtworkUrl); 
+    const artworkIds = fetchedData.data.map(element => element.id);
+
+    
+    var knownWorks = []; 
+    if(artworkIds.length !== 0){
+        knownWorks = await createResourcesListFromIds(UrlTypes.ARTWORK, artworkIds); 
+    }
+
+    const artist = new Artist ( fetchedDataData.api_link
+                                    , fetchedDataData.id
+                                    , fetchedDataData.title
+                                    , fetchedDataData.birth_date
+                                    , fetchedDataData.death_date
+                                    , fetchedDataData.description
+                                    , knownWorks
+    );
+
+    return artist;
+}
+
+/**
+ * This method will create and return an Artist object from the 
+ * provided fetched Data 
+ * 
+ * @param {*} fetchedDataData data, in the form of JSON, retrieved from the API call 
+ * from within the data section
+ * @returns the resulting Artist object
+ * @throws TypeError if found in the api model type that provided data does not
+ * belong to an Artist, stored as 'agents' in data.api_model
+ */
+async function createArtwork(fetchedDataData) {
+    if(fetchedDataData.api_model !== 'artworks') {
+        throw new TypeError('Provided data must belong to an artworks resource.');
+    } 
+    
+    const artworkImageId = fetchedDataData.image_id;
+    var artworkImageUrl; 
+    if(artworkImageId !== null) {
+        artworkImageUrl = await imageUrlFromId(artworkImageId); 
+    }
+    const artwork = new Artwork(fetchedDataData.api_link
+                                    , fetchedDataData.id
+                                    , fetchedDataData.title
+                                    , artworkImageId
+                                    , artworkImageUrl
+                                    , fetchedDataData.artist_id
+                                    , fetchedDataData.artist_display
+                                    , fetchedDataData.date_display
+                                    , fetchedDataData.short_description // .replace(/<\/?[^>]+(>|$)/g, '')
+                                    , fetchedDataData.alt_titles
+                                    , fetchedDataData.date_start
+                                    , fetchedDataData.date_end
+                                    , fetchedDataData.place_of_origin
+                                    , fetchedDataData.description // .replace(/<\/?[^>]+(>|$)/g, '')
+                                    , fetchedDataData.medium_display
+                                    , fetchedDataData.artist_ids
+                                    , fetchedDataData.artist_titles
+                                    , fetchedDataData.style_title
+                                    , fetchedDataData.classification_title
+    );
+    return artwork;
 }
 
 /**
@@ -258,14 +347,14 @@ function imageUrlConstructor(baseUrl, id, sizeW, sizeH
 async function imageUrlFromId(imageId, sizeW = 843, sizeH = undefined
                                 , regionX = 0, regionY = 0, regionW = 100, regionH = 100
                                 , rotation = 0, flipped = false) {
-
-    const fetchUrl = fetchUrlConstructor(UrlTypes.IMAGE, imageId);
+                                    
+    const fetchUrl = fetchUrlConstructor(UrlTypes.IMAGE, [imageId], false);   
     const fetchedImageData = await fetchData(fetchUrl);
     const imageUrl = imageUrlConstructor(fetchedImageData.config.iiif_url
                                         , fetchedImageData.data.id
                                         , sizeW, sizeH
                                         , regionX, regionY, regionW, regionH
-                                        , rotation, flipped);
+                                        , rotation, flipped); 
     return imageUrl;
 }
 
@@ -280,17 +369,22 @@ async function imageUrlFromId(imageId, sizeW = 843, sizeH = undefined
  * @returns the resulting URL which will be used for the api call
  */
 function fetchUrlConstructor(type, characteristic, requiredOnly = true) {
+    
     if(characteristic.length === 0) {
         throw new RangeError('Characteristics array should contain at least one value.');
     }
-
-    var url = 'https://api.artic.edu/api/v1';
-    var characteristicString = characteristic.join(',');
-
+    
+    var url = 'https://api.artic.edu/api/v1'; 
+    var characteristicString = characteristic.join(','); 
+    
     //Special case for FEATURED_EXHIBITS since it will generally stay the same to search for 
     // featured exhibitions. The only differing element is how many objects are retrieved
     if(type === UrlTypes.FEATURED_EXHIBITS && characteristic.length == 1) {
         return `${url}/exhibitions/search?query[term][is_featured]=true&page=1&limit=${characteristicString}`;
+    } else if (type === UrlTypes.ARTWORK_BY_ARTIST) {
+        return `${url}/artworks/search?query[term][artist_id]=${characteristicString}&page=1&limit=10`;
+    } else if (type === UrlTypes.RANDOM_ARTIST && characteristic.length == 1) {
+        return `${url}/agents?query[term][is_artist]=true&page=${characteristicString}&limit=10`;
     }
 
     //adding endpoint to url based on selected type
@@ -301,7 +395,7 @@ function fetchUrlConstructor(type, characteristic, requiredOnly = true) {
         case UrlTypes.IMAGE:
             url = `${url}/images`;
             break;
-        case UrlTypes.ARTIST:
+        case UrlTypes.ARTIST: 
             url = `${url}/agents`;
             break;
         case UrlTypes.ARTWORK:
@@ -311,7 +405,7 @@ function fetchUrlConstructor(type, characteristic, requiredOnly = true) {
     }
 
     //Based on how many ids are being retrieved, the syntax will be affected
-    if(characteristic.length > 1) {
+    if(characteristic.length > 1) { 
         url = `${url}?ids=${characteristicString}`;
     } else {
         url = `${url}/${characteristicString}`;
@@ -331,64 +425,87 @@ function fetchUrlConstructor(type, characteristic, requiredOnly = true) {
                 url = `${url}fields=api_model,api_link,id,title,short_description,image_url,gallery_title,artist_ids,image_id`;
                 break;
             case UrlTypes.IMAGE:
-                url = `${url}fields=id`;
+                url = `${url}fields=id,api_model,api_link,title,image_id`;
                 break;
             case UrlTypes.ARTIST:
-                url = `${url}fields=id`;
+                url = `${url}fields=api_model,api_link,id,title,death_date,birth_date,description`;
                 break;
             case UrlTypes.ARTWORK:
-                url = `${url}fields=id`;
+                url = `${url}fields=api_model,api_link,id,title,image_id,artist_id,artist_display,date_display,short_description,alt_titles,date_start,date_end,place_of_origin,description,medium_display,fetchedDataData.artist_ids,artist_titles,style_title,classification_title`;
                 break;
-            default:
+            default:;
         }
-    }
-
-    return url;
+    } 
+    return url; 
 }
 
 /**
- * A function which will help create several Exhibition objects after calling the
+ * A function which will help create several resource objects after calling the
  * fetch functions
  * 
- * @param {*} exhibitIds the array of ids associated with one or more exhibits
+ * @param {*} resourceTypes the type of resource the ids are associated wit
+ * @param {*} resourceIds the array of ids associated with one or more resources
  * @returns an array of exhibition objects
  */
-async function createExhibitionListFromIds(exhibitIds) {
+async function createResourcesListFromIds(resourceTypes, resourceIds) {
+    
     //take array of objects and construct a new fetch url to get specific data
     //on each exhibition based on their id
-    const exhibitResourcesUrl = fetchUrlConstructor(UrlTypes.EXHIBIT, exhibitIds);
-    const fetchedExhibitData = await fetchData(exhibitResourcesUrl);
+    const resourcesUrl = fetchUrlConstructor(resourceTypes, resourceIds);
+    const fetchedResourceData = await fetchData(resourcesUrl);
     
     //traverse through JSON object to create the exhibition object
-    var exhibits = [];
-    if(fetchedExhibitData.data.length > 1){
-        for (const element of fetchedExhibitData.data) {
-            const newExhibit = await createExhibition(element);
-            exhibits.push(newExhibit);
+    var resources = [];
+    if(fetchedResourceData.data.length > 1){
+        for (const element of fetchedResourceData.data) {
+            var newResource;
+            
+            switch(resourceTypes){
+                case UrlTypes.EXHIBIT:
+                    newResource = await createExhibition(element);
+                    break;
+                case UrlTypes.ARTIST:  
+                    newResource = await createArtist(element); 
+                    break;
+                case UrlTypes.ARTWORK: 
+                    newResource = await createArtwork(element);
+                    break;
+                default:
+                    break;
+            }
+            resources.push(newResource);
         }  
     }
+    //if only one item was returned, will have to only extract the one resource
     else {
-        const newExhibit = await createExhibition(fetchedExhibitData.data);
-        exhibits.push(newExhibit);
-    }
-    return exhibits;
+        var newResource;
+        switch(resourceTypes){
+            case UrlTypes.EXHIBIT:
+                newResource = await createExhibition(fetchedResourceData.data);
+                break;
+            case UrlTypes.ARTIST: 
+                newResource = await createArtist(fetchedResourceData.data);
+                break;
+            case UrlTypes.ARTWORK:
+                newResource = await createArtwork(fetchedResourceData.data);
+                break;
+            default:
+                break;
+        }
+        resources.push(newResource);
+    } 
+    console.log(resourceTypes + "jkjlkjlk");
+    return resources;
 }
 
 /**
- * A function which is meant to help load the initia page for exhibitions
+ * A function which is meant to help load the 
  */
-async function displayFeaturedExhibitions() {
-    //retrieve a list of 5 featured exhibits using fetch function
-    const featuredExhibitsUrl = fetchUrlConstructor(UrlTypes.FEATURED_EXHIBITS, [5]);
-    const fetchedData = await fetchData(featuredExhibitsUrl);
-    
-    //the id of the exhibits will be added to an array and each will be fetched
-    const exhibitIds = fetchedData.data.map(element => element.id); 
-    var featuredExhibitions = await createExhibitionListFromIds(exhibitIds);
+async function displayCardsOnActivePage(cardItemArray) {
     const container = document.getElementById('card-container');
-    
+
     //card container will hold all images, thus a new card must be created for each exhibit
-    for(const element of featuredExhibitions) {
+    for(const element of cardItemArray) {
         //create card which will contain image & description
         const card = document.createElement('div');
         card.className = 'card';
@@ -397,24 +514,19 @@ async function displayFeaturedExhibitions() {
         //create image which will be added inside of card
         const cardImage = document.createElement('img');
         cardImage.className = 'card-image';
-        if(element.imageUrl !== undefined) {
-            cardImage.src = element.imageUrl; 
-        }
-        else if(element.heroImageUrl !== undefined) {
-            cardImage.src = element.heroImageUrl;
-        }
+        cardImage.src = element[0];
         card.appendChild(cardImage);
 
         //create card title
         const cardTitle = document.createElement('h3');
         cardTitle.className = 'card-title';
-        cardTitle.textContent = element.title;
+        cardTitle.textContent = element[1];
         card.appendChild(cardTitle);
 
         //create card description
         const cardDescription = document.createElement('p');
         cardDescription.className = 'card-description';
-        cardDescription.textContent = element.shortDescription;
+        cardDescription.textContent = element[2];
         card.appendChild(cardDescription);
 
         //create a button to read more about this specific object
@@ -425,7 +537,89 @@ async function displayFeaturedExhibitions() {
     }
 }
 
-displayFeaturedExhibitions();
+/**
+ * A function which helps with determining which values should be added to the
+ * website 
+ * 
+ * @param {*} resourceToPresent the array of resources where data will be extracted from
+ * to help determine the velues needed on the card on the website
+ * @param {*} resourceType the type of resource which is being examined
+ */
+function generateCardGenerationArray(resourceType, resourceToPresent) {
+    var cardsArray = [];
+
+    //see if resources are exhibitions
+    if(resourceType === UrlTypes.EXHIBIT){
+        var selectedURL;
+
+        for(const element of resourceToPresent){
+            if(element.imageUrl !== undefined) {
+                selectedURL = element.imageUrl; 
+            }
+            else if(element.heroImageUrl !== undefined) {
+                selectedURL = element.heroImageUrl;
+            }
+            else{
+                selectedURL = DEFAULT_IMAGE_URL;
+            }
+            cardsArray.push([selectedURL, element.title, element.shortDescription]);
+        }
+    } 
+    //see if the resources are artists
+    else if (resourceType === UrlTypes.ARTIST) {
+        var selectedURL;
+        for(const element of resourceToPresent) {
+            
+            if(element.knownWorks.length > 0 && element.knownWorks !== undefined) {
+                
+                selectedURL = element.knownWorks[0].imageUrl; 
+            }
+            else {
+                selectedURL = DEFAULT_IMAGE_URL; 
+            }
+            
+            console.log(selectedURL);
+            cardsArray.push([selectedURL, element.title, element.description]);
+        }
+    }
+    //see if the resources to view are artworks
+    else if (resourceType === UrlTypes.ARTWORK) {
+        var selectedURL;
+        for(const element of resourceToPresent) {
+            cardsArray.push(imageUrl, title, shortDescription);
+        }
+    } else {
+        throw new TypeError("Provided data needs to be of type artwork, artist or exihibition.");
+    }
+
+    return cardsArray;
+}
+
+async function displayFeaturedExhibitions() {
+    //retrieve a list of 10 featured exhibits using fetch function
+    const featuredExhibitsUrl = fetchUrlConstructor(UrlTypes.FEATURED_EXHIBITS, [10]);
+    const fetchedData = await fetchData(featuredExhibitsUrl);
+    
+    //the id of the exhibits will be added to an array and each will be fetched
+    const exhibitIds = fetchedData.data.map(element => element.id); 
+    var featuredExhibitions = await createResourcesListFromIds(UrlTypes.EXHIBIT, exhibitIds);
+    const cardArray = generateCardGenerationArray(UrlTypes.EXHIBIT, featuredExhibitions);
+    displayCardsOnActivePage(cardArray);
+}
+
+async function displayRandomArtist() {
+    const randomArtistsUrl = fetchUrlConstructor(UrlTypes.RANDOM_ARTIST, [1 + Math.floor((Math.random() * 1700))]); 
+    const fetchedData = await fetchData(randomArtistsUrl);
+    
+    //the id of the exhibits will be added to an array and each will be fetched
+    const artistsIds = fetchedData.data.map(element => element.id);
+    
+    var randomArtists = await createResourcesListFromIds(UrlTypes.ARTIST, artistsIds);  console.log("artistsIds");
+    const cardArray = generateCardGenerationArray(UrlTypes.ARTIST, randomArtists);
+    displayCardsOnActivePage(cardArray);
+}
+// displayRandomArtist();
+//displayFeaturedExhibitions(); 
 
 
 /*
